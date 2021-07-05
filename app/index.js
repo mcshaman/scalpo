@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const packetModel = require("./models/packets");
 const bodyParser = require('body-parser');
 const http = require('http');
 const moment = require('moment-timezone');
@@ -19,6 +20,30 @@ const app = express();
 const server = http.createServer(app).listen(PORT, () => console.log(`Listening on ${ PORT }`));
 
 let priceData;
+let lastPrice = 0;
+let lastPurchasePrice = 0;
+let activePackets = 0;
+let marketId = 'ETH-AUD';
+
+var options = {
+    host: 'api.btcmarkets.net',
+    path: '/v3/markets/ETH-AUD/ticker'
+};
+
+callback = function(response) {
+    let marketData;
+
+    //another chunk of data has been received, so append it to `str`
+    response.on('data', function (chunk) {
+        marketData = JSON.parse(chunk);
+    });
+
+    //the whole response has been received, so we just print it out here
+    response.on('end', function () {
+        lastPrice = marketData.lastPrice;
+        console.log('FreshMarketData: $'+lastPrice);
+    });
+}
 
 function makeHttpCall(method, path, queryString, dataObj) {
     var data = null;
@@ -38,7 +63,8 @@ function makeHttpCall(method, path, queryString, dataObj) {
         });
         res.on('end', function () {
             //console.log(output);
-            priceData = output;
+            priceData = JSON.parse(output);
+            lastPrice = priceData.lastPrice;
         });
         console.log("response code: " + res.statusCode);
     });
@@ -103,11 +129,14 @@ async function monitorPrice() {
   console.log("Checking prices...");
   monitoringPrice = true;
 
+  https.request(options, callback).end();
+
+
   try {
 
     await checkMarketTicker({
-      marketId: 'ETH-AUD'
-    }).then(console.log("Hey"+priceData));
+      marketId: marketId
+    }).then(console.log("Last Price: $"+lastPrice));
 
   } catch (error) {
     console.error(error)
@@ -115,6 +144,18 @@ async function monitorPrice() {
     clearInterval(priceMonitor)
     return
   }
+
+    //Rule 1:  If no active packets, buy a packet
+    if (!activePackets && (lastPrice > 0)) {
+        await packetModel.create(marketId, 'ACTIVE')
+            .then((response) => console.log(response));
+//        console.log("Packet should be created here ... "+packet_id);
+        activePackets++;
+    }
+    //Rule 1:  If no active packets, buy a packet and set a lastPurchasePrice
+    //Rule 2:  If price drops 1.5% below lastPurchasePrice, buy a packet.
+    //Rule 3:  If a buy order is "Fully Matched"? and has no Sell Order, Create sell order for 1.5% higher price
+    //Rule 4:  If an active packet has both Buy and sell orders "Fully Matched", then set the packet as completed
 
   monitoringPrice = false
 }
