@@ -1,11 +1,19 @@
-require('dotenv').config();
+require('dotenv-flow').config();
 const express = require('express');
 const packetModel = require("./models/packets");
 const crypto = require('crypto');
 const https = require('https');
 
-const apiKey = "985f5a2f-be0c-48f0-b25e-d01233c20ed0";
-const privateKey = "fdA/UG71dT+wpLW5myyHWMCq8hwCg0XzXz+AA8Ms46wja1zqkqtTw+yvjwiFLlMLZXkTlSu0gTu5vAsdt50H1A==";
+const {
+	BTC_MARKETS_API_KEY,
+	BTC_MARKETS_PRIVATE_KEY,
+} = process.env
+
+if (!BTC_MARKETS_API_KEY || !BTC_MARKETS_PRIVATE_KEY) {
+	console.log('🚨 BTC Markets ENVs not set')
+	process.exit()
+}
+
 const baseUrl = "api.btcmarkets.net";
 
 // SERVER CONFIG
@@ -74,12 +82,12 @@ function buildAuthHeaders(method, path, data) {
     if (data) {
         message += data;
     }
-    const signature = signMessage(privateKey, message);
+    const signature = signMessage(BTC_MARKETS_PRIVATE_KEY, message);
     const headers = {
         "Accept": "application/json",
         "Accept-Charset": "UTF-8",
         "Content-Type": "application/json",
-        "BM-AUTH-APIKEY": apiKey,
+        "BM-AUTH-APIKEY": BTC_MARKETS_API_KEY,
         "BM-AUTH-TIMESTAMP": now,
         "BM-AUTH-SIGNATURE": signature
     };

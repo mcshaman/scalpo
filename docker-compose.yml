@@ -3,7 +3,6 @@ services:
   web:
     build:
       context: .
-    env_file: ./.env
     command: npm start
     volumes:
       - .:/app/
