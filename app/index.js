@@ -1,12 +1,6 @@
 require('dotenv').config();
 const express = require('express');
 const packetModel = require("./models/packets");
-const bodyParser = require('body-parser');
-const http = require('http');
-const moment = require('moment-timezone');
-const numeral = require('numeral');
-const _ = require('lodash');
-const axios = require('axios');
 const crypto = require('crypto');
 const https = require('https');
 
@@ -17,7 +11,7 @@ const baseUrl = "api.btcmarkets.net";
 // SERVER CONFIG
 const PORT = process.env.PORT || 5000;
 const app = express();
-const server = http.createServer(app).listen(PORT, () => console.log(`Listening on ${ PORT }`));
+app.listen(PORT, () => console.log(`Listening on ${ PORT }`));
 
 let priceData;
 let lastPrice = 0;
