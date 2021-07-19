@@ -2,7 +2,7 @@ require('dotenv-flow').config();
 const express = require('express');
 const packetModel = require("./models/packets");
 const crypto = require('crypto');
-const https = require('https');
+const axios = require('axios')
 
 const {
 	BTC_MARKETS_API_KEY,
@@ -14,7 +14,13 @@ if (!BTC_MARKETS_API_KEY || !BTC_MARKETS_PRIVATE_KEY) {
 	process.exit()
 }
 
-const baseUrl = "api.btcmarkets.net";
+const btcMarketsApi = axios.create({
+    baseURL: 'https://api.btcmarkets.net',
+    headers: {
+        'Accept-Charset': 'UTF-8',
+        'Content-Type': 'application/json',
+    }
+});
 
 // SERVER CONFIG
 const PORT = process.env.PORT || 5000;
@@ -27,71 +33,17 @@ let lastPurchasePrice = 0;
 let activePackets = 0;
 let marketId = 'ETH-AUD';
 
-var options = {
-    host: 'api.btcmarkets.net',
-    path: '/v3/markets/ETH-AUD/ticker'
-};
+function buildAuthHeaders(method, path) {
+    const now = Date.now()
 
-callback = function(response) {
-    let marketData;
-
-    //another chunk of data has been received, so append it to `str`
-    response.on('data', function (chunk) {
-        marketData = JSON.parse(chunk);
-    });
-
-    //the whole response has been received, so we just print it out here
-    response.on('end', function () {
-        lastPrice = marketData.lastPrice;
-        console.log('FreshMarketData: $'+lastPrice);
-    });
-}
-
-function makeHttpCall(method, path, queryString, dataObj) {
-    var data = null;
-    if (dataObj) {
-        data = JSON.stringify(dataObj);
+    return headers = {
+        'BM-AUTH-APIKEY': BTC_MARKETS_API_KEY,
+        'BM-AUTH-TIMESTAMP': now,
+        'BM-AUTH-SIGNATURE': signMessage(
+            BTC_MARKETS_PRIVATE_KEY,
+            `${method}${path}${now}`
+        ),
     }
-    const headers = buildAuthHeaders(method, path, data);
-    let fullPath = path;
-    if (queryString != null) {
-        fullPath += '?' + queryString
-    }
-    const httpOptions = {host: baseUrl, path: fullPath, method: method, headers: headers};
-    var req = https.request(httpOptions, function(res) {
-        var output = '';
-        res.on('data', function (chunk) {
-            output += chunk;
-        });
-        res.on('end', function () {
-            //console.log(output);
-            priceData = JSON.parse(output);
-            lastPrice = priceData.lastPrice;
-        });
-        console.log("response code: " + res.statusCode);
-    });
-    if (data) {
-        req.write(data);
-    }
-    req.end();
-}
-
-function buildAuthHeaders(method, path, data) {
-    const now = Date.now();
-    let message =  method + path + now;
-    if (data) {
-        message += data;
-    }
-    const signature = signMessage(BTC_MARKETS_PRIVATE_KEY, message);
-    const headers = {
-        "Accept": "application/json",
-        "Accept-Charset": "UTF-8",
-        "Content-Type": "application/json",
-        "BM-AUTH-APIKEY": BTC_MARKETS_API_KEY,
-        "BM-AUTH-TIMESTAMP": now,
-        "BM-AUTH-SIGNATURE": signature
-    };
-    return headers;
 }
 
 function signMessage(secret, message) {
@@ -101,56 +53,33 @@ function signMessage(secret, message) {
     return signature;
 }
 
-async function checkMarketTicker(args) {
-  const { marketId } = args;
-
-//hit the market ticker and log the result 
-	let path = "/v3/markets/"+marketId+"/ticker";  
-	makeHttpCall('GET', path, null, null);
-/*
-  console.table([{
-    'Input Token': inputTokenSymbol,
-    'Output Token': outputTokenSymbol,
-    'Input Amount': web3.utils.fromWei(inputAmount, 'Ether'),
-    'Uniswap Return': web3.utils.fromWei(uniswapResult, 'Ether'),
-    'Kyber Expected Rate': web3.utils.fromWei(kyberResult.expectedRate, 'Ether'),
-    'Kyber Min Return': web3.utils.fromWei(kyberResult.slippageRate, 'Ether'),
-    'Timestamp': moment().tz('America/Chicago').format(),
-  }])
-  */
-}
-
 let priceMonitor;
-let monitoringPrice = false;
 
 async function monitorPrice() {
-  if(monitoringPrice) {
-    return
-  }
+    console.log("Checking prices...");
 
-  console.log("Checking prices...");
-  monitoringPrice = true;
+    const response = await btcMarketsApi({
+        method: 'get',
+        url: `/v3/markets/${marketId}/ticker`,
+        headers: buildAuthHeaders('get', `/v3/markets/${marketId}/ticker`),
+    })
 
-  https.request(options, callback).end();
+    console.log(`FreshMarketData: $${response.data.lastPrice}`)
 
-
-  try {
-
-    await checkMarketTicker({
-      marketId: marketId
-    }).then(console.log("Last Price: $"+lastPrice));
-
-  } catch (error) {
-    console.error(error)
-    monitoringPrice = false
-    clearInterval(priceMonitor)
-    return
-  }
+    // console.table([{
+    //     'Input Token': inputTokenSymbol,
+    //     'Output Token': outputTokenSymbol,
+    //     'Input Amount': web3.utils.fromWei(inputAmount, 'Ether'),
+    //     'Uniswap Return': web3.utils.fromWei(uniswapResult, 'Ether'),
+    //     'Kyber Expected Rate': web3.utils.fromWei(kyberResult.expectedRate, 'Ether'),
+    //     'Kyber Min Return': web3.utils.fromWei(kyberResult.slippageRate, 'Ether'),
+    //     'Timestamp': moment().tz('America/Chicago').format(),
+    // }])
 
     //Rule 1:  If no active packets, buy a packet
-    if (!activePackets && (lastPrice > 0)) {
-        await packetModel.create(marketId, 'ACTIVE')
-            .then((response) => console.log(response));
+    if (!activePackets && (response.data.lastPrice > 0)) {
+        const result = await packetModel.create(marketId, 'ACTIVE')
+        console.log(result)
 //        console.log("Packet should be created here ... "+packet_id);
         activePackets++;
     }
@@ -158,8 +87,6 @@ async function monitorPrice() {
     //Rule 2:  If price drops 1.5% below lastPurchasePrice, buy a packet.
     //Rule 3:  If a buy order is "Fully Matched"? and has no Sell Order, Create sell order for 1.5% higher price
     //Rule 4:  If an active packet has both Buy and sell orders "Fully Matched", then set the packet as completed
-
-  monitoringPrice = false
 }
 
 // Check markets every n seconds

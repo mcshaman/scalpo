@@ -21,11 +21,8 @@ exports.findOne = async function (packet_id) {
 };
 
 exports.create = async function (market_id, status = 'pending') {
-	await db.query("INSERT INTO packets(market_id, status) VALUES (?, ?)", [market_id, status])
-		.then((result) => {
-		return result.insertId
-	});
-
+	const result = await db.query("INSERT INTO packets(market_id, status) VALUES (?, ?)", [market_id, status])
+	return result
 };
 
 exports.update = async function (packet_id, market_id, status) {
