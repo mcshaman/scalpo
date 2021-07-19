@@ -7,6 +7,8 @@ const axios = require('axios')
 const {
 	BTC_MARKETS_API_KEY,
 	BTC_MARKETS_PRIVATE_KEY,
+	PORT = 5000,
+	POLLING_INTERVAL = 5000,
 } = process.env
 
 if (!BTC_MARKETS_API_KEY || !BTC_MARKETS_PRIVATE_KEY) {
@@ -23,15 +25,8 @@ const btcMarketsApi = axios.create({
 });
 
 // SERVER CONFIG
-const PORT = process.env.PORT || 5000;
 const app = express();
 app.listen(PORT, () => console.log(`Listening on ${ PORT }`));
-
-let priceData;
-let lastPrice = 0;
-let lastPurchasePrice = 0;
-let activePackets = 0;
-let marketId = 'ETH-AUD';
 
 function buildAuthHeaders(method, path) {
     const now = Date.now()
@@ -53,9 +48,11 @@ function signMessage(secret, message) {
     return signature;
 }
 
-let priceMonitor;
+let activePackets = 0;
 
 async function monitorPrice() {
+	const marketId = 'ETH-AUD'
+
     console.log("Checking prices...");
 
     const response = await btcMarketsApi({
@@ -89,6 +86,4 @@ async function monitorPrice() {
     //Rule 4:  If an active packet has both Buy and sell orders "Fully Matched", then set the packet as completed
 }
 
-// Check markets every n seconds
-const POLLING_INTERVAL = process.env.POLLING_INTERVAL || 5000 // 5 Seconds
-priceMonitor = setInterval(async () => { await monitorPrice() }, POLLING_INTERVAL)
+setInterval(monitorPrice, POLLING_INTERVAL)
