@@ -2,10 +2,6 @@
   "name": "trading-bot",
   "version": "0.3.0",
   "description": "BTC Markets Cryptocurrency Trading Bot",
-  "engines": {
-    "node": "10.x"
-  },
-  "main": "app/index.js",
   "scripts": {
     "start": "node app/index.js",
     "test": "node test.js"
