@@ -1,9 +1,8 @@
-import express from 'express'
 import Packets from './Packets.js'
 import crypto from 'crypto'
 import axios from 'axios'
 
-const { BTC_MARKETS_API_KEY, BTC_MARKETS_PRIVATE_KEY, PORT = '5000', POLLING_INTERVAL = '5000' } = process.env
+const { BTC_MARKETS_API_KEY, BTC_MARKETS_PRIVATE_KEY, POLLING_INTERVAL = '5000' } = process.env
 
 if (!BTC_MARKETS_API_KEY || !BTC_MARKETS_PRIVATE_KEY) {
 	console.log('🚨 BTC Markets ENVs not set')
@@ -19,10 +18,6 @@ const btcMarketsApi = axios.create({
 })
 
 const packets = new Packets()
-
-// SERVER CONFIG
-const app = express()
-app.listen(PORT, () => console.log(`Listening on ${PORT}`))
 
 function buildAuthHeaders(method, path) {
 	const now = Date.now()
