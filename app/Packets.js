@@ -13,7 +13,7 @@ import { Low, JSONFile } from 'lowdb'
  * @property {string} pricePct24h
  * @property {string} low24h
  * @property {string} high24h
- * @property {string} timestamp 
+ * @property {string} timestamp
  */
 
 export default class Packets {
@@ -29,27 +29,35 @@ export default class Packets {
 		this.#packets = new Low(adapter)
 	}
 
-	async #getData() {
-		const packets = this.#packets
+	#getData() {
+		const { data } = this.#packets
 
-		if (!packets.data) {
-			await packets.read()
-
-			packets.data = packets.data || []
+		if (!data) {
+			throw new Error('🤬 Packets instance not initialised')
 		}
-		
-		return packets.data
+
+		return data
 	}
 
-	async getAll() {
-		return await this.#getData()
+	async initialise() {
+		const packets = this.#packets
+
+		await packets.read()
+
+		packets.data = packets.data || []
+
+		return this
+	}
+
+	get all() {
+		return this.#getData()
 	}
 
 	/**
-	 * @param {Packet} packet 
+	 * @param {Packet} packet
 	 */
 	async add(packet) {
-		const data = await this.#getData()
+		const data = this.#getData()
 
 		data.push(packet)
 

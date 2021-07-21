@@ -1,9 +1,10 @@
 import { getTick } from './btcMarketsApi.js'
 import Packets from './Packets.js'
 
-const packets = new Packets()
-
-async function monitorPrice() {
+/**
+ * @param {Packets} packets 
+ */
+async function monitorPrice(packets) {
 	const tick = await getTick()
 
 	// console.table([{
@@ -17,8 +18,7 @@ async function monitorPrice() {
 	// }])
 
 	//Rule 1:  If no active packets, buy a packet
-	const allPackets = await packets.getAll()
-	if (allPackets.length === 0) {
+	if (packets.all.length === 0) {
 		await packets.add(tick)
 
 		console.log(`✨  added ticker data with best bid $${tick.bestBid}`)
@@ -29,6 +29,12 @@ async function monitorPrice() {
 	//Rule 4:  If an active packet has both Buy and sell orders "Fully Matched", then set the packet as completed
 }
 
-const { POLLING_INTERVAL = '5000' } = process.env
+async function main() {
+	const packets = await new Packets().initialise()
 
-setInterval(monitorPrice, parseInt(POLLING_INTERVAL))
+	const { POLLING_INTERVAL = '5000' } = process.env
+
+	setInterval(() => monitorPrice(packets), parseInt(POLLING_INTERVAL))
+}
+
+main()
