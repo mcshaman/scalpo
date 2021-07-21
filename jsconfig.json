@@ -1,0 +1,12 @@
+{
+	"exclude": ["node_modules/"],
+	"compilerOptions": {
+		"module": "esnext",
+		"moduleResolution": "node",
+		"checkJs": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": false,
+		"strictNullChecks": true,
+		"target": "es2015"
+	}
+}
