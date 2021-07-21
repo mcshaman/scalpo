@@ -1,8 +1,7 @@
-require('dotenv-flow').config()
-const express = require('express')
-const packetModel = require('./models/packets')
-const crypto = require('crypto')
-const axios = require('axios')
+import express from 'express'
+import * as packetModel from './models/packets.js'
+import crypto from 'crypto'
+import axios from 'axios'
 
 const { BTC_MARKETS_API_KEY, BTC_MARKETS_PRIVATE_KEY, PORT = 5000, POLLING_INTERVAL = 5000 } = process.env
 
@@ -26,7 +25,7 @@ app.listen(PORT, () => console.log(`Listening on ${PORT}`))
 function buildAuthHeaders(method, path) {
 	const now = Date.now()
 
-	return (headers = {
+	return ({
 		'BM-AUTH-APIKEY': BTC_MARKETS_API_KEY,
 		'BM-AUTH-TIMESTAMP': now,
 		'BM-AUTH-SIGNATURE': signMessage(BTC_MARKETS_PRIVATE_KEY, `${method}${path}${now}`),
@@ -78,4 +77,4 @@ async function monitorPrice() {
 	//Rule 4:  If an active packet has both Buy and sell orders "Fully Matched", then set the packet as completed
 }
 
-setInterval(monitorPrice, POLLING_INTERVAL)
+setInterval(monitorPrice, parseInt(POLLING_INTERVAL))

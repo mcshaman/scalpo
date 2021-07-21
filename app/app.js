@@ -1,8 +1,5 @@
-//app.js
-
-require('dotenv').config()
-const express = require('express')
-const packetModel = require('./models/packets')
+import express from 'express'
+import * as packetModel from './models/packets.js'
 
 const app = express()
 app.use(express.json())

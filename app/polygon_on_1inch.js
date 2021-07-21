@@ -1,6 +1,5 @@
-/** NodeJS example of using the 1INCH API with web3{js} */
-const axios = require('axios') //used for getting api data, install with "yarn add axios"
-const { ethers } = require('ethers') //full ethereum wallet written as a javascript module, documentation here: https://docs.ethers.io/v5/getting-started/
+import axios from 'axios'
+import ethers from 'ethers'
 
 var privateKey = '0x49711e286a2f4f9d57e28a10786cfaddadce0f8b0b573a1891905c50a51b2cbd' //private key in hex with a leading 0x
 

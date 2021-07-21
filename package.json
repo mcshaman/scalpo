@@ -2,8 +2,9 @@
 	"name": "trading-bot",
 	"version": "0.3.0",
 	"description": "BTC Markets Cryptocurrency Trading Bot",
+	"type": "module",
 	"scripts": {
-		"start": "node app/index.js",
+		"start": "node -r dotenv-flow/config app/index.js",
 		"test": "node test.js"
 	},
 	"dependencies": {

@@ -1,4 +1,4 @@
-const mysql = require('mysql2')
+import mysql from 'mysql2'
 
 const pool = mysql.createPool({
 	host: process.env.MYSQL_HOST,
@@ -7,7 +7,4 @@ const pool = mysql.createPool({
 	database: process.env.MYSQL_DATABASE,
 })
 
-//Convert pool object to promise based object
-const promisePool = pool.promise()
-
-module.exports = promisePool
+export default pool.promise()

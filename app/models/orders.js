@@ -1,4 +1,4 @@
-const db = require('../db')
+import db from '../db.js'
 
 //Create a table for products in the database if it doesn't exist at application start
 async function createTable() {
@@ -16,24 +16,24 @@ async function createTable() {
 
 !createTable()
 
-exports.findAll = async function () {
+export async function findAll() {
 	const results = await db.query('SELECT * FROM orders')
 	return results[0]
 }
 
-exports.findOne = async function (order_id) {
+export async function findOne(order_id) {
 	const result = await db.query('SELECT * FROM orders WHERE order_id=?', order_id)
 	return result[0]
 }
 
-exports.create = async function (packet_id, price, amount, order_placed, order_type, status) {
+export async function create(packet_id, price, amount, order_placed, order_type, status) {
 	await db.query(
 		'INSERT INTO orders(packet_id, price, amount, order_placed, order_type, status) VALUES (?, ?, ?, ?, ?, ?)',
 		[packet_id, price, amount, order_placed, order_type, status],
 	)
 }
 
-exports.update = async function (order_id, packet_id, price, amount, order_placed, order_type, status) {
+export async function update(order_id, packet_id, price, amount, order_placed, order_type, status) {
 	await db.query(
 		'UPDATE orders SET packet_id=?, price=?, amount=?, order_placed=?, order_type=?, status=? WHERE order_id=?',
 		[packet_id, price, amount, order_placed, order_type, status, order_id],
