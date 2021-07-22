@@ -1,5 +1,21 @@
 import { getTick } from './btcMarketsApi.js'
 import Packets from './Packets.js'
+import chalk from 'chalk'
+
+function makeRelativePrice(value) {
+	const price = new Intl.NumberFormat('en-US', {
+		style: 'currency',
+		currency: 'USD',
+		signDisplay: 'exceptZero',
+	}).format(value)
+	
+	return `${chalk.bold.green(price)}`
+}
+
+function makePrice(value) {
+	const price = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
+	return `${chalk.bold(price)}`
+}
 
 /**
  * @param {Packets} packets
@@ -21,7 +37,7 @@ async function monitorPrice(packets) {
 	const tickBestBid = parseFloat(tick.bestBid)
 
 	if (packets.all.length === 0) {
-		console.log(`🛒  purchasing $${tickBestBid} packet – first packet`)
+		console.log(`🛒  purchase packet ${makePrice(tickBestBid)}`)
 
 		return await packets.add({
 			purchasePrice: parseFloat(tick.bestBid),
@@ -33,9 +49,9 @@ async function monitorPrice(packets) {
 	const packetsLastPurchased = packets.lastPurchased
 
 	if (tickBestBid < packetsLastPurchased.purchasePrice) {
-		console.log(
-			`🛒  purchasing $${tickBestBid} packet – last purchased packet $${packetsLastPurchased.purchasePrice}`,
-		)
+		const difference = packetsLastPurchased.purchasePrice - tickBestBid
+ 
+		console.log(`🛒  purchase packet ${makePrice(tickBestBid)} ${makeRelativePrice(difference)}`)
 
 		return await packets.add({
 			purchasePrice: parseFloat(tick.bestBid),
