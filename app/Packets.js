@@ -5,6 +5,7 @@ import { Low, JSONFile } from 'lowdb'
  * @typedef {Object} Packet
  * @property {number} purchasePrice
  * @property {number} purchaseTimestamp
+ * @property {'purchased' | 'sold'} status
  */
 
 export default class Packets {
@@ -44,15 +45,21 @@ export default class Packets {
 		return this.#data
 	}
 
+	get purchased() {
+		return this.all.filter(packet => packet.status === 'purchased')
+	}
+
 	get lastPurchased() {
-		return this.all.sort((a, b) => b.purchaseTimestamp - a.purchaseTimestamp)[0]
+		return this.purchased.sort((a, b) => b.purchaseTimestamp - a.purchaseTimestamp)[0]
 	}
 
 	/**
-	 * @param {Packet} packet
+	 * @param {Object} purchaseData
+	 * @param {number} purchaseData.purchasePrice
+	 * @param {number} purchaseData.purchaseTimestamp
 	 */
-	async add(packet) {
-		this.all.push(packet)
+	async add(purchaseData) {
+		this.all.push({...purchaseData, status: 'purchased'})
 
 		await this.#packets.write()
 	}

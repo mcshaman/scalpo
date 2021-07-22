@@ -36,7 +36,7 @@ async function monitorPrice(packets) {
 	//Rule 1:  If no active packets, buy a packet
 	const tickBestBid = parseFloat(tick.bestBid)
 
-	if (packets.all.length === 0) {
+	if (packets.purchased.length === 0) {
 		console.log(`🛒  purchase packet ${makePrice(tickBestBid)}`)
 
 		return await packets.add({
@@ -46,10 +46,10 @@ async function monitorPrice(packets) {
 	}
 
 	//Rule 2:  If price drops 1.5% below lastPurchasePrice, buy a packet.
-	const packetsLastPurchased = packets.lastPurchased
+	const packetLastPurchased = packets.lastPurchased
 
-	if (tickBestBid < packetsLastPurchased.purchasePrice) {
-		const difference = packetsLastPurchased.purchasePrice - tickBestBid
+	if (tickBestBid < packetLastPurchased.purchasePrice) {
+		const difference = packetLastPurchased.purchasePrice - tickBestBid
  
 		console.log(`🛒  purchase packet ${makePrice(tickBestBid)} ${makeRelativePrice(difference)}`)
 
