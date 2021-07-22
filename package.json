@@ -4,13 +4,14 @@
 	"description": "BTC Markets Cryptocurrency Trading Bot",
 	"type": "module",
 	"scripts": {
-		"start": "node -r dotenv-flow/config app/index.js",
+		"start": "nodemon --watch app -r dotenv-flow/config app/index.js",
 		"test": "node test.js"
 	},
 	"dependencies": {
 		"axios": "^0.19.2",
 		"lowdb": "^2.1.0",
-		"mysql2": "^2.2.5"
+		"mysql2": "^2.2.5",
+		"nodemon": "^2.0.12"
 	},
 	"license": "MIT",
 	"devDependencies": {
