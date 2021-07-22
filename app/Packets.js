@@ -44,9 +44,8 @@ export default class Packets {
 		return this.#data
 	}
 
-	get lowestPurchasePrice() {
-		const lowestPurchasePrices = this.all.map(item => item.purchasePrice)
-		return Math.min(...lowestPurchasePrices)
+	get lastPurchased() {
+		return this.all.sort((a, b) => b.purchaseTimestamp - a.purchaseTimestamp)[0]
 	}
 
 	/**

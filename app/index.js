@@ -21,7 +21,7 @@ async function monitorPrice(packets) {
 	const tickBestBid = parseFloat(tick.bestBid)
 
 	if (packets.all.length === 0) {
-		console.log(`🛒  purchasing first packet, best bid $${tickBestBid}`)
+		console.log(`🛒  purchasing $${tickBestBid} packet – first packet`)
 
 		return await packets.add({
 			purchasePrice: parseFloat(tick.bestBid),
@@ -29,11 +29,12 @@ async function monitorPrice(packets) {
 		})
 	}
 
-	const packetsLowestPurchasePrice = packets.lowestPurchasePrice
+	//Rule 2:  If price drops 1.5% below lastPurchasePrice, buy a packet.
+	const packetsLastPurchased = packets.lastPurchased
 
-	if (tickBestBid < packetsLowestPurchasePrice) {
+	if (tickBestBid < packetsLastPurchased.purchasePrice) {
 		console.log(
-			`🛒  purchasing packet, best bid $${tickBestBid} less than purchased lowest best bid $${packetsLowestPurchasePrice}`,
+			`🛒  purchasing $${tickBestBid} packet – last purchased packet $${packetsLastPurchased.purchasePrice}`,
 		)
 
 		return await packets.add({
@@ -42,8 +43,6 @@ async function monitorPrice(packets) {
 		})
 	}
 
-	//Rule 1:  If no active packets, buy a packet and set a lastPurchasePrice
-	//Rule 2:  If price drops 1.5% below lastPurchasePrice, buy a packet.
 	//Rule 3:  If a buy order is "Fully Matched"? and has no Sell Order, Create sell order for 1.5% higher price
 	//Rule 4:  If an active packet has both Buy and sell orders "Fully Matched", then set the packet as completed
 }
