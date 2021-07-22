@@ -23,17 +23,23 @@ async function monitorPrice(packets) {
 	if (packets.all.length === 0) {
 		console.log(`🛒  purchasing first packet, best bid $${tickBestBid}`)
 
-		return await packets.add(tick)
+		return await packets.add({
+			purchasePrice: parseFloat(tick.bestBid),
+			purchaseTimestamp: new Date(tick.timestamp).getTime(),
+		})
 	}
-	
-	
-	const packetsLowestBestBid = parseFloat(packets.lowestBestBid)
-	if (tickBestBid < packetsLowestBestBid) {
+
+	const packetsLowestPurchasePrice = packets.lowestPurchasePrice
+
+	if (tickBestBid < packetsLowestPurchasePrice) {
 		console.log(
-			`🛒  purchasing packet, best bid $${tickBestBid} less than purchased lowest best bid $${packetsLowestBestBid}`,
+			`🛒  purchasing packet, best bid $${tickBestBid} less than purchased lowest best bid $${packetsLowestPurchasePrice}`,
 		)
 
-		return await packets.add(tick)
+		return await packets.add({
+			purchasePrice: parseFloat(tick.bestBid),
+			purchaseTimestamp: new Date(tick.timestamp).getTime(),
+		})
 	}
 
 	//Rule 1:  If no active packets, buy a packet and set a lastPurchasePrice

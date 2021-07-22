@@ -3,17 +3,8 @@ import { Low, JSONFile } from 'lowdb'
 
 /**
  * @typedef {Object} Packet
- * @property {string} marketId
- * @property {string} bestBid
- * @property {string} bestAsk
- * @property {string} lastPrice
- * @property {string} volume24h
- * @property {string} volumeQte24h
- * @property {string} price24h
- * @property {string} pricePct24h
- * @property {string} low24h
- * @property {string} high24h
- * @property {string} timestamp
+ * @property {number} purchasePrice
+ * @property {number} purchaseTimestamp
  */
 
 export default class Packets {
@@ -53,16 +44,16 @@ export default class Packets {
 		return this.#data
 	}
 
-	get lowestBestBid() {
-		const bestBids = this.#data.map(item => parseFloat(item.bestBid))
-		return Math.min(...bestBids).toString()
+	get lowestPurchasePrice() {
+		const lowestPurchasePrices = this.all.map(item => item.purchasePrice)
+		return Math.min(...lowestPurchasePrices)
 	}
 
 	/**
 	 * @param {Packet} packet
 	 */
 	async add(packet) {
-		this.#data.push(packet)
+		this.all.push(packet)
 
 		await this.#packets.write()
 	}
