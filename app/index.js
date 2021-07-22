@@ -2,7 +2,7 @@ import { getTick } from './btcMarketsApi.js'
 import Packets from './Packets.js'
 
 /**
- * @param {Packets} packets 
+ * @param {Packets} packets
  */
 async function monitorPrice(packets) {
 	const tick = await getTick()
@@ -18,11 +18,24 @@ async function monitorPrice(packets) {
 	// }])
 
 	//Rule 1:  If no active packets, buy a packet
-	if (packets.all.length === 0) {
-		await packets.add(tick)
+	const tickBestBid = parseFloat(tick.bestBid)
 
-		console.log(`✨  added ticker data with best bid $${tick.bestBid}`)
+	if (packets.all.length === 0) {
+		console.log(`🛒  purchasing first packet, best bid $${tickBestBid}`)
+
+		return await packets.add(tick)
 	}
+	
+	
+	const packetsLowestBestBid = parseFloat(packets.lowestBestBid)
+	if (tickBestBid < packetsLowestBestBid) {
+		console.log(
+			`🛒  purchasing packet, best bid $${tickBestBid} less than purchased lowest best bid $${packetsLowestBestBid}`,
+		)
+
+		return await packets.add(tick)
+	}
+
 	//Rule 1:  If no active packets, buy a packet and set a lastPurchasePrice
 	//Rule 2:  If price drops 1.5% below lastPurchasePrice, buy a packet.
 	//Rule 3:  If a buy order is "Fully Matched"? and has no Sell Order, Create sell order for 1.5% higher price

@@ -29,7 +29,7 @@ export default class Packets {
 		this.#packets = new Low(adapter)
 	}
 
-	#getData() {
+	get #data() {
 		const { data } = this.#packets
 
 		if (!data) {
@@ -50,16 +50,19 @@ export default class Packets {
 	}
 
 	get all() {
-		return this.#getData()
+		return this.#data
+	}
+
+	get lowestBestBid() {
+		const bestBids = this.#data.map(item => parseFloat(item.bestBid))
+		return Math.min(...bestBids).toString()
 	}
 
 	/**
 	 * @param {Packet} packet
 	 */
 	async add(packet) {
-		const data = this.#getData()
-
-		data.push(packet)
+		this.#data.push(packet)
 
 		await this.#packets.write()
 	}
