@@ -1,10 +1,14 @@
 import { join } from 'path'
 import { Low, JSONFile } from 'lowdb'
+import { v4 as uuidv4 } from 'uuid'
 
 /**
  * @typedef {Object} Packet
+ * @property {string} id
  * @property {number} purchasePrice
  * @property {number} purchaseTimestamp
+ * @property {number} [sellPrice]
+ * @property {number} [sellTimestamp]
  * @property {'purchased' | 'sold'} status
  */
 
@@ -29,6 +33,10 @@ export default class Packets {
 		}
 
 		return data
+	}
+
+	#getPacketIndex(packetId) {
+		return this.all.findIndex(packet => packet.id === packetId)
 	}
 
 	async initialise() {
@@ -59,7 +67,26 @@ export default class Packets {
 	 * @param {number} purchaseData.purchaseTimestamp
 	 */
 	async add(purchaseData) {
-		this.all.push({...purchaseData, status: 'purchased'})
+		this.all.push({...purchaseData, id: uuidv4(), status: 'purchased'})
+
+		await this.#packets.write()
+	}
+
+	/**
+	 * @param {string} packetId
+	 * @param {Object} sellData
+	 * @param {number} sellData.sellPrice
+	 * @param {number} sellData.sellTimestamp
+	 */
+	async sell(packetId, sellData) {
+		const packetIndex = this.#getPacketIndex(packetId)
+
+		const packet = this.all[packetIndex]
+		this.all[packetIndex] = {
+			...packet,
+			...sellData,
+			status: 'sold'
+		}
 
 		await this.#packets.write()
 	}

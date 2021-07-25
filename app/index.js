@@ -50,16 +50,27 @@ async function monitorPrice(packets) {
 
 	if (tickBestBid < packetLastPurchased.purchasePrice) {
 		const difference = packetLastPurchased.purchasePrice - tickBestBid
- 
 		console.log(`🛒  purchase packet ${makePrice(tickBestBid)} ${makeRelativePrice(difference)}`)
 
-		return await packets.add({
+		await packets.add({
 			purchasePrice: parseFloat(tick.bestBid),
 			purchaseTimestamp: new Date(tick.timestamp).getTime(),
 		})
 	}
 
 	//Rule 3:  If a buy order is "Fully Matched"? and has no Sell Order, Create sell order for 1.5% higher price
+	packets.purchased.forEach(packet => {
+		if (packet.purchasePrice < tickBestBid) {
+			const difference = tickBestBid - packet.purchasePrice
+			console.log(`💰  sell packet ${makePrice(tickBestBid)} ${makeRelativePrice(difference)}`)
+
+			packets.sell(packet.id, {
+				sellPrice: parseFloat(tick.bestBid),
+				sellTimestamp: new Date(tick.timestamp).getTime(),
+			})
+		}
+	})
+
 	//Rule 4:  If an active packet has both Buy and sell orders "Fully Matched", then set the packet as completed
 }
 

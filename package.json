@@ -12,7 +12,8 @@
 		"chalk": "^3.0.0",
 		"lowdb": "^2.1.0",
 		"mysql2": "^2.2.5",
-		"nodemon": "^2.0.12"
+		"nodemon": "^2.0.12",
+		"uuid": "^8.3.2"
 	},
 	"license": "MIT",
 	"devDependencies": {
