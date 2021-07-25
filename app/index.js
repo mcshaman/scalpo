@@ -66,16 +66,6 @@ function makePrice(value) {
 async function monitorPrice(packets) {
 	const tick = await getTick()
 
-	// console.table([{
-	//	'Input Token': inputTokenSymbol,
-	//	'Output Token': outputTokenSymbol,
-	//	'Input Amount': web3.utils.fromWei(inputAmount, 'Ether'),
-	//	'Uniswap Return': web3.utils.fromWei(uniswapResult, 'Ether'),
-	//	'Kyber Expected Rate': web3.utils.fromWei(kyberResult.expectedRate, 'Ether'),
-	//	'Kyber Min Return': web3.utils.fromWei(kyberResult.slippageRate, 'Ether'),
-	//	'Timestamp': moment().tz('America/Chicago').format(),
-	// }])
-
 	//Rule 1:  If no active packets, buy a packet
 	const tickBestBid = parseFloat(tick.bestBid)
 
