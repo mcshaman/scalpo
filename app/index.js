@@ -18,6 +18,12 @@ function isMinimumDifference(valueA, valueB, minPercent) {
  * @param {Packets} packets
  */
 function shouldPurchase(tickBestBid, packets) {
+	if (packets.purchased.length === 0) {
+		console.log(`🛒  purchase packet ${makePrice(tickBestBid)}`)
+
+		return true
+	}
+
 	const packetLastPurchased = packets.lastPurchased
 
 	if (isMinimumDifference(packetLastPurchased.purchasePrice, tickBestBid, 1.5)) {
@@ -66,17 +72,7 @@ function makePrice(value) {
 async function monitorPrice(packets) {
 	const tick = await getTick()
 
-	//Rule 1:  If no active packets, buy a packet
 	const tickBestBid = parseFloat(tick.bestBid)
-
-	if (packets.purchased.length === 0) {
-		console.log(`🛒  purchase packet ${makePrice(tickBestBid)}`)
-
-		return await packets.add({
-			purchasePrice: parseFloat(tick.bestBid),
-			purchaseTimestamp: new Date(tick.timestamp).getTime(),
-		})
-	}
 
 	//Rule 2:  If price drops 1.5% below lastPurchasePrice, buy a packet.
 	if (shouldPurchase(tickBestBid, packets)) {
