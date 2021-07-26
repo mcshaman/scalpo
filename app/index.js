@@ -1,16 +1,110 @@
 import { getTick } from './btcMarketsApi.js'
 import Packets from './Packets.js'
 import chalk from 'chalk'
+import { stripIndent } from 'common-tags'
 
 /**
- * @param {number} valueA
- * @param {number} valueB
- * @param {number} minPercent
+ * @param {number} startValue
+ * @param {number} endValue
  */
-function isMinimumDifference(valueA, valueB, minPercent) {
-	const difference = valueB - valueA
-	const differencePercent = (difference / valueA) * 100
-	return differencePercent > minPercent
+function getPercent(startValue, endValue) {
+	return (endValue / startValue) * 100
+}
+
+/**
+ * @param {number} startValue
+ * @param {number} endValue
+ */
+function getPercentDiff(startValue, endValue) {
+	const percent = getPercent(startValue, endValue)
+
+	return percent - 100
+}
+
+/**
+ * @param {number} startValue
+ * @param {number} endValue
+ * @param {number} percentMargin
+ */
+function getIsOverPercentMargin(startValue, endValue, percentMargin) {
+	const percentDiff = getPercentDiff(startValue, endValue)
+
+	return percentDiff > percentMargin
+}
+
+/**
+ * @param {number} value
+ */
+function formatPrice(value) {
+	return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
+}
+
+/**
+ * @param {number} value
+ */
+function formatPercent(value) {
+	return new Intl.NumberFormat('en-US', {
+		style: 'percent',
+		maximumFractionDigits: 2,
+	}).format(value / 100)
+}
+
+/**
+ * @param {number} tickBestBid
+ * @param {Packets} packets
+ * @param {number} minPercentMargin
+ */
+function logAcquisitions(tickBestBid, packets, minPercentMargin) {
+	const lastPurchasedPrice = packets.lastPurchased.purchasePrice
+
+	const formattedLastPurchasePrice = formatPrice(lastPurchasedPrice)
+
+	const maxPurchasePrice = lastPurchasedPrice - (lastPurchasedPrice * minPercentMargin) / 100
+	const formattedMaxPurchasePrice = formatPrice(maxPurchasePrice)
+	const formattedMinPercentMargin = formatPercent(minPercentMargin)
+
+	const isOverPercentMargin = getIsOverPercentMargin(tickBestBid, lastPurchasedPrice, minPercentMargin)
+	const colourise = isOverPercentMargin ? chalk.green : chalk.red
+	const formattedBestOfferPrice = colourise(formatPrice(tickBestBid))
+	const formattedBestOfferPercent = colourise(formatPercent(getPercentDiff(tickBestBid, lastPurchasedPrice)))
+
+	console.log(stripIndent`
+		🛒	Acquisitions
+			Last purchase price: ${formattedLastPurchasePrice}
+			Max purchase price: ${formattedMaxPurchasePrice} • ${formattedMinPercentMargin}
+			Best offer: ${formattedBestOfferPrice} • ${formattedBestOfferPercent}
+	`)
+
+	console.log()
+}
+
+/**
+ * @param {number} tickBestBid
+ * @param {import('./Packets.js').Packet} packet
+ * @param {number} minPercentMargin
+ */
+function logSales(tickBestBid, packet, minPercentMargin) {
+	const purchasePrice = packet.purchasePrice
+
+	const formattedPurchasePrice = formatPrice(purchasePrice)
+
+	const minSellPrice = purchasePrice + (purchasePrice * minPercentMargin) / 100
+	const formattedMinSellPrice = formatPrice(minSellPrice)
+	const formattedMinPercentMargin = formatPercent(minPercentMargin)
+
+	const isOverPercentMargin = getIsOverPercentMargin(tickBestBid, purchasePrice, minPercentMargin)
+	const colourise = isOverPercentMargin ? chalk.green : chalk.red
+	const formattedBestOfferPrice = colourise(formatPrice(tickBestBid))
+	const formattedBestOfferPercent = colourise(formatPercent(getPercentDiff(tickBestBid, purchasePrice)))
+
+	console.log(stripIndent`
+		💰	Sales
+			Purchase price: ${formattedPurchasePrice}
+			Min sell price: ${formattedMinSellPrice} • ${formattedMinPercentMargin}
+			Best offer: ${formattedBestOfferPrice} • ${formattedBestOfferPercent}
+	`)
+
+	console.log()
 }
 
 /**
@@ -19,17 +113,24 @@ function isMinimumDifference(valueA, valueB, minPercent) {
  */
 function shouldPurchase(tickBestBid, packets) {
 	if (packets.purchased.length === 0) {
-		console.log(`🛒  purchase packet ${makePrice(tickBestBid)}`)
+		const formattedBestOfferPrice = chalk.green(formatPrice(tickBestBid))
+
+		console.log(stripIndent`
+			🛒	Acquisitions
+				Best offer: ${formattedBestOfferPrice}
+		`)
+
+		console.log()
 
 		return true
 	}
 
 	const packetLastPurchased = packets.lastPurchased
+	const minPercentMargin = 1.5
 
-	if (isMinimumDifference(packetLastPurchased.purchasePrice, tickBestBid, 1.5)) {
-		const difference = packetLastPurchased.purchasePrice - tickBestBid
-		console.log(`🛒  purchase packet ${makePrice(tickBestBid)} ${makeRelativePrice(difference)}`)
+	logAcquisitions(tickBestBid, packets, minPercentMargin)
 
+	if (getIsOverPercentMargin(packetLastPurchased.purchasePrice, tickBestBid, minPercentMargin)) {
 		return true
 	}
 
@@ -41,29 +142,15 @@ function shouldPurchase(tickBestBid, packets) {
  * @param {import('./Packets.js').Packet} packet
  */
 function shouldSell(tickBestBid, packet) {
-	if (isMinimumDifference(packet.purchasePrice, tickBestBid, 1.5)) {
-		const difference = tickBestBid - packet.purchasePrice
-		console.log(`💰  sell packet ${makePrice(tickBestBid)} ${makeRelativePrice(difference)}`)
+	const minPercentMargin = 1.5
 
+	logSales(tickBestBid, packet, minPercentMargin)
+
+	if (getIsOverPercentMargin(packet.purchasePrice, tickBestBid, minPercentMargin)) {
 		return true
 	}
 
 	return false
-}
-
-function makeRelativePrice(value) {
-	const price = new Intl.NumberFormat('en-US', {
-		style: 'currency',
-		currency: 'USD',
-		signDisplay: 'exceptZero',
-	}).format(value)
-
-	return `${chalk.bold.green(price)}`
-}
-
-function makePrice(value) {
-	const price = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
-	return `${chalk.bold(price)}`
 }
 
 /**
@@ -74,7 +161,6 @@ async function monitorPrice(packets) {
 
 	const tickBestBid = parseFloat(tick.bestBid)
 
-	//Rule 2:  If price drops 1.5% below lastPurchasePrice, buy a packet.
 	if (shouldPurchase(tickBestBid, packets)) {
 		await packets.add({
 			purchasePrice: parseFloat(tick.bestBid),
@@ -82,7 +168,6 @@ async function monitorPrice(packets) {
 		})
 	}
 
-	//Rule 3:  If a buy order is "Fully Matched"? and has no Sell Order, Create sell order for 1.5% higher price
 	packets.purchased.forEach((packet) => {
 		if (shouldSell(tickBestBid, packet)) {
 			packets.sell(packet.id, {
@@ -91,8 +176,6 @@ async function monitorPrice(packets) {
 			})
 		}
 	})
-
-	//Rule 4:  If an active packet has both Buy and sell orders "Fully Matched", then set the packet as completed
 }
 
 async function main() {
