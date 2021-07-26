@@ -69,10 +69,10 @@ function logAcquisitions(tickBestBid, packets, minPercentMargin) {
 	const formattedBestOfferPercent = colourise(formatPercent(getPercentDiff(tickBestBid, lastPurchasedPrice)))
 
 	console.log(stripIndent`
-		🛒	Acquisitions
-			Last purchase price: ${formattedLastPurchasePrice}
-			Max purchase price: ${formattedMaxPurchasePrice} • ${formattedMinPercentMargin}
-			Best offer: ${formattedBestOfferPrice} • ${formattedBestOfferPercent}
+		🛒 Acquisitions
+		   Last purchase price: ${formattedLastPurchasePrice}
+		   Max purchase price: ${formattedMaxPurchasePrice} • ${formattedMinPercentMargin}
+		   Best offer: ${formattedBestOfferPrice} • ${formattedBestOfferPercent}
 	`)
 
 	console.log()
@@ -98,10 +98,10 @@ function logSales(tickBestBid, packet, minPercentMargin) {
 	const formattedBestOfferPercent = colourise(formatPercent(getPercentDiff(tickBestBid, purchasePrice)))
 
 	console.log(stripIndent`
-		💰	Sales
-			Purchase price: ${formattedPurchasePrice}
-			Min sell price: ${formattedMinSellPrice} • ${formattedMinPercentMargin}
-			Best offer: ${formattedBestOfferPrice} • ${formattedBestOfferPercent}
+		💰 Sales
+		   Purchase price: ${formattedPurchasePrice}
+		   Min sell price: ${formattedMinSellPrice} • ${formattedMinPercentMargin}
+		   Best offer: ${formattedBestOfferPrice} • ${formattedBestOfferPercent}
 	`)
 
 	console.log()
@@ -116,8 +116,8 @@ function shouldPurchase(tickBestBid, packets) {
 		const formattedBestOfferPrice = chalk.green(formatPrice(tickBestBid))
 
 		console.log(stripIndent`
-			🛒	Acquisitions
-				Best offer: ${formattedBestOfferPrice}
+			🛒 Acquisitions
+			   Best offer: ${formattedBestOfferPrice}
 		`)
 
 		console.log()
