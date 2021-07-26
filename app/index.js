@@ -130,7 +130,7 @@ function shouldPurchase(tickBestBid, packets) {
 
 	logAcquisitions(tickBestBid, packets, minPercentMargin)
 
-	if (getIsOverPercentMargin(packetLastPurchased.purchasePrice, tickBestBid, minPercentMargin)) {
+	if (getIsOverPercentMargin(tickBestBid, packetLastPurchased.purchasePrice, minPercentMargin)) {
 		return true
 	}
 
@@ -146,7 +146,7 @@ function shouldSell(tickBestBid, packet) {
 
 	logSales(tickBestBid, packet, minPercentMargin)
 
-	if (getIsOverPercentMargin(packet.purchasePrice, tickBestBid, minPercentMargin)) {
+	if (getIsOverPercentMargin(tickBestBid, packet.purchasePrice, minPercentMargin)) {
 		return true
 	}
 
