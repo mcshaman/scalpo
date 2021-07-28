@@ -92,10 +92,10 @@ function logSales(tickBestBid, packet, minPercentMargin) {
 	const formattedMinSellPrice = formatPrice(minSellPrice)
 	const formattedMinPercentMargin = formatPercent(minPercentMargin)
 
-	const isOverPercentMargin = getIsOverPercentMargin(tickBestBid, purchasePrice, minPercentMargin)
+	const isOverPercentMargin = getIsOverPercentMargin(purchasePrice, tickBestBid, minPercentMargin)
 	const colourise = isOverPercentMargin ? chalk.green : chalk.red
 	const formattedBestOfferPrice = colourise(formatPrice(tickBestBid))
-	const formattedBestOfferPercent = colourise(formatPercent(getPercentDiff(tickBestBid, purchasePrice)))
+	const formattedBestOfferPercent = colourise(formatPercent(getPercentDiff(purchasePrice, tickBestBid)))
 
 	console.log(stripIndent`
 		💰 Sales
@@ -146,7 +146,7 @@ function shouldSell(tickBestBid, packet) {
 
 	logSales(tickBestBid, packet, minPercentMargin)
 
-	if (getIsOverPercentMargin(tickBestBid, packet.purchasePrice, minPercentMargin)) {
+	if (getIsOverPercentMargin(packet.purchasePrice, tickBestBid, minPercentMargin)) {
 		return true
 	}
 
