@@ -1,165 +1,189 @@
-require('dotenv').config();
-const express = require('express');
-const packetModel = require("./models/packets");
-const bodyParser = require('body-parser');
-const http = require('http');
-const moment = require('moment-timezone');
-const numeral = require('numeral');
-const _ = require('lodash');
-const axios = require('axios');
-const crypto = require('crypto');
-const https = require('https');
+import { getTick } from './btcMarketsApi.js'
+import Packets from './Packets.js'
+import chalk from 'chalk'
+import { stripIndent } from 'common-tags'
 
-const apiKey = "985f5a2f-be0c-48f0-b25e-d01233c20ed0";
-const privateKey = "fdA/UG71dT+wpLW5myyHWMCq8hwCg0XzXz+AA8Ms46wja1zqkqtTw+yvjwiFLlMLZXkTlSu0gTu5vAsdt50H1A==";
-const baseUrl = "api.btcmarkets.net";
-
-// SERVER CONFIG
-const PORT = process.env.PORT || 5000;
-const app = express();
-const server = http.createServer(app).listen(PORT, () => console.log(`Listening on ${ PORT }`));
-
-let priceData;
-let lastPrice = 0;
-let lastPurchasePrice = 0;
-let activePackets = 0;
-let marketId = 'ETH-AUD';
-
-var options = {
-    host: 'api.btcmarkets.net',
-    path: '/v3/markets/ETH-AUD/ticker'
-};
-
-callback = function(response) {
-    let marketData;
-
-    //another chunk of data has been received, so append it to `str`
-    response.on('data', function (chunk) {
-        marketData = JSON.parse(chunk);
-    });
-
-    //the whole response has been received, so we just print it out here
-    response.on('end', function () {
-        lastPrice = marketData.lastPrice;
-        console.log('FreshMarketData: $'+lastPrice);
-    });
+/**
+ * @param {number} startValue
+ * @param {number} endValue
+ */
+function getPercent(startValue, endValue) {
+	return (endValue / startValue) * 100
 }
 
-function makeHttpCall(method, path, queryString, dataObj) {
-    var data = null;
-    if (dataObj) {
-        data = JSON.stringify(dataObj);
-    }
-    const headers = buildAuthHeaders(method, path, data);
-    let fullPath = path;
-    if (queryString != null) {
-        fullPath += '?' + queryString
-    }
-    const httpOptions = {host: baseUrl, path: fullPath, method: method, headers: headers};
-    var req = https.request(httpOptions, function(res) {
-        var output = '';
-        res.on('data', function (chunk) {
-            output += chunk;
-        });
-        res.on('end', function () {
-            //console.log(output);
-            priceData = JSON.parse(output);
-            lastPrice = priceData.lastPrice;
-        });
-        console.log("response code: " + res.statusCode);
-    });
-    if (data) {
-        req.write(data);
-    }
-    req.end();
+/**
+ * @param {number} startValue
+ * @param {number} endValue
+ */
+function getPercentDiff(startValue, endValue) {
+	const percent = getPercent(startValue, endValue)
+
+	return percent - 100
 }
 
-function buildAuthHeaders(method, path, data) {
-    const now = Date.now();
-    let message =  method + path + now;
-    if (data) {
-        message += data;
-    }
-    const signature = signMessage(privateKey, message);
-    const headers = {
-        "Accept": "application/json",
-        "Accept-Charset": "UTF-8",
-        "Content-Type": "application/json",
-        "BM-AUTH-APIKEY": apiKey,
-        "BM-AUTH-TIMESTAMP": now,
-        "BM-AUTH-SIGNATURE": signature
-    };
-    return headers;
+/**
+ * @param {number} startValue
+ * @param {number} endValue
+ * @param {number} percentMargin
+ */
+function getIsOverPercentMargin(startValue, endValue, percentMargin) {
+	const percentDiff = getPercentDiff(startValue, endValue)
+
+	return percentDiff > percentMargin
 }
 
-function signMessage(secret, message) {
-    var buffer = Buffer.from(secret, 'base64');
-    var hmac = crypto.createHmac('sha512', buffer);
-    var signature = hmac.update(message).digest('base64');
-    return signature;
+/**
+ * @param {number} value
+ */
+function formatPrice(value) {
+	return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
 }
 
-async function checkMarketTicker(args) {
-  const { marketId } = args;
-
-//hit the market ticker and log the result 
-	let path = "/v3/markets/"+marketId+"/ticker";  
-	makeHttpCall('GET', path, null, null);
-/*
-  console.table([{
-    'Input Token': inputTokenSymbol,
-    'Output Token': outputTokenSymbol,
-    'Input Amount': web3.utils.fromWei(inputAmount, 'Ether'),
-    'Uniswap Return': web3.utils.fromWei(uniswapResult, 'Ether'),
-    'Kyber Expected Rate': web3.utils.fromWei(kyberResult.expectedRate, 'Ether'),
-    'Kyber Min Return': web3.utils.fromWei(kyberResult.slippageRate, 'Ether'),
-    'Timestamp': moment().tz('America/Chicago').format(),
-  }])
-  */
+/**
+ * @param {number} value
+ */
+function formatPercent(value) {
+	return new Intl.NumberFormat('en-US', {
+		style: 'percent',
+		maximumFractionDigits: 2,
+	}).format(value / 100)
 }
 
-let priceMonitor;
-let monitoringPrice = false;
+/**
+ * @param {number} tickBestBid
+ * @param {Packets} packets
+ * @param {number} minPercentMargin
+ */
+function logAcquisitions(tickBestBid, packets, minPercentMargin) {
+	const lastPurchasedPrice = packets.lastPurchased.purchasePrice
 
-async function monitorPrice() {
-  if(monitoringPrice) {
-    return
-  }
+	const formattedLastPurchasePrice = formatPrice(lastPurchasedPrice)
 
-  console.log("Checking prices...");
-  monitoringPrice = true;
+	const maxPurchasePrice = lastPurchasedPrice - (lastPurchasedPrice * minPercentMargin) / 100
+	const formattedMaxPurchasePrice = formatPrice(maxPurchasePrice)
+	const formattedMinPercentMargin = formatPercent(minPercentMargin)
 
-  https.request(options, callback).end();
+	const isOverPercentMargin = getIsOverPercentMargin(tickBestBid, lastPurchasedPrice, minPercentMargin)
+	const colourise = isOverPercentMargin ? chalk.green : chalk.red
+	const formattedBestOfferPrice = colourise(formatPrice(tickBestBid))
+	const formattedBestOfferPercent = colourise(formatPercent(getPercentDiff(tickBestBid, lastPurchasedPrice)))
 
+	console.log(stripIndent`
+		🛒 Acquisitions
+		   Last purchase price: ${formattedLastPurchasePrice}
+		   Max purchase price: ${formattedMaxPurchasePrice} • ${formattedMinPercentMargin}
+		   Best offer: ${formattedBestOfferPrice} • ${formattedBestOfferPercent}
+	`)
 
-  try {
-
-    await checkMarketTicker({
-      marketId: marketId
-    }).then(console.log("Last Price: $"+lastPrice));
-
-  } catch (error) {
-    console.error(error)
-    monitoringPrice = false
-    clearInterval(priceMonitor)
-    return
-  }
-
-    //Rule 1:  If no active packets, buy a packet
-    if (!activePackets && (lastPrice > 0)) {
-        await packetModel.create(marketId, 'ACTIVE')
-            .then((response) => console.log(response));
-//        console.log("Packet should be created here ... "+packet_id);
-        activePackets++;
-    }
-    //Rule 1:  If no active packets, buy a packet and set a lastPurchasePrice
-    //Rule 2:  If price drops 1.5% below lastPurchasePrice, buy a packet.
-    //Rule 3:  If a buy order is "Fully Matched"? and has no Sell Order, Create sell order for 1.5% higher price
-    //Rule 4:  If an active packet has both Buy and sell orders "Fully Matched", then set the packet as completed
-
-  monitoringPrice = false
+	console.log()
 }
 
-// Check markets every n seconds
-const POLLING_INTERVAL = process.env.POLLING_INTERVAL || 5000 // 5 Seconds
-priceMonitor = setInterval(async () => { await monitorPrice() }, POLLING_INTERVAL)
+/**
+ * @param {number} tickBestBid
+ * @param {import('./Packets.js').Packet} packet
+ * @param {number} minPercentMargin
+ */
+function logSales(tickBestBid, packet, minPercentMargin) {
+	const purchasePrice = packet.purchasePrice
+
+	const formattedPurchasePrice = formatPrice(purchasePrice)
+
+	const minSellPrice = purchasePrice + (purchasePrice * minPercentMargin) / 100
+	const formattedMinSellPrice = formatPrice(minSellPrice)
+	const formattedMinPercentMargin = formatPercent(minPercentMargin)
+
+	const isOverPercentMargin = getIsOverPercentMargin(tickBestBid, purchasePrice, minPercentMargin)
+	const colourise = isOverPercentMargin ? chalk.green : chalk.red
+	const formattedBestOfferPrice = colourise(formatPrice(tickBestBid))
+	const formattedBestOfferPercent = colourise(formatPercent(getPercentDiff(tickBestBid, purchasePrice)))
+
+	console.log(stripIndent`
+		💰 Sales
+		   Purchase price: ${formattedPurchasePrice}
+		   Min sell price: ${formattedMinSellPrice} • ${formattedMinPercentMargin}
+		   Best offer: ${formattedBestOfferPrice} • ${formattedBestOfferPercent}
+	`)
+
+	console.log()
+}
+
+/**
+ * @param {number} tickBestBid
+ * @param {Packets} packets
+ */
+function shouldPurchase(tickBestBid, packets) {
+	if (packets.purchased.length === 0) {
+		const formattedBestOfferPrice = chalk.green(formatPrice(tickBestBid))
+
+		console.log(stripIndent`
+			🛒 Acquisitions
+			   Best offer: ${formattedBestOfferPrice}
+		`)
+
+		console.log()
+
+		return true
+	}
+
+	const packetLastPurchased = packets.lastPurchased
+	const minPercentMargin = 1.5
+
+	logAcquisitions(tickBestBid, packets, minPercentMargin)
+
+	if (getIsOverPercentMargin(tickBestBid, packetLastPurchased.purchasePrice, minPercentMargin)) {
+		return true
+	}
+
+	return false
+}
+
+/**
+ * @param {number} tickBestBid
+ * @param {import('./Packets.js').Packet} packet
+ */
+function shouldSell(tickBestBid, packet) {
+	const minPercentMargin = 1.5
+
+	logSales(tickBestBid, packet, minPercentMargin)
+
+	if (getIsOverPercentMargin(tickBestBid, packet.purchasePrice, minPercentMargin)) {
+		return true
+	}
+
+	return false
+}
+
+/**
+ * @param {Packets} packets
+ */
+async function monitorPrice(packets) {
+	const tick = await getTick()
+
+	const tickBestBid = parseFloat(tick.bestBid)
+
+	if (shouldPurchase(tickBestBid, packets)) {
+		await packets.add({
+			purchasePrice: parseFloat(tick.bestBid),
+			purchaseTimestamp: new Date(tick.timestamp).getTime(),
+		})
+	}
+
+	packets.purchased.forEach((packet) => {
+		if (shouldSell(tickBestBid, packet)) {
+			packets.sell(packet.id, {
+				sellPrice: parseFloat(tick.bestBid),
+				sellTimestamp: new Date(tick.timestamp).getTime(),
+			})
+		}
+	})
+}
+
+async function main() {
+	const packets = await new Packets().initialise()
+
+	const { POLLING_INTERVAL = '5000' } = process.env
+
+	setInterval(() => monitorPrice(packets), parseInt(POLLING_INTERVAL))
+}
+
+main()

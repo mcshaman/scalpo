@@ -1,19 +1,17 @@
 version: '3.8'
 services:
   web:
-    build:
-      context: .
-    env_file: ./.env
+    image: node
     command: npm start
+    working_dir: /home/node/app
     volumes:
-      - .:/app/
-      - /app/node_modules
-    ports:
-      - $NODE_LOCAL_PORT:$NODE_DOCKER_PORT
+      - .:/home/node/app
     depends_on:
       - mysqldb
     environment:
       MYSQL_HOST: mysqldb
+    restart: always
+    tty: true
   mysqldb:
     image: mysql
     env_file: ./.env
